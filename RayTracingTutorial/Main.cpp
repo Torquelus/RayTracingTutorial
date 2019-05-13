@@ -24,15 +24,13 @@ int main() {
 	for (int j = ny - 1; j >= 0; j--) {
 		for (int i = 0; i < nx; i++) {
 			
-			// RGB Values 0-1.0
-			float r = float(i) / float(nx);
-			float g = float(j) / float(ny);
-			float b = 0.2;
+			// Vector3 of Values
+			Vector3 col(float(i) / float(nx), float(j) / float(ny), 0.2);
 
 			// Converted RGB Values 0-255
-			int ir = int(255.99 * r);
-			int ig = int(255.99 * g);
-			int ib = int(255.99 * b);
+			int ir = int(255.99 * col[0]);
+			int ig = int(255.99 * col[1]);
+			int ib = int(255.99 * col[2]);
 
 			// Add to PPM
 			outputFile << ir << " " << ig << " " << ib << "\n";
