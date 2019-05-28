@@ -56,11 +56,6 @@ inline Vector3& Vector3::operator/=(const float t) {
 
 // Vector3 Methods
 
-// Length of Vector3
-inline float Vector3::length() const{
-	return sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);
-}
-
 // Squared Length of Vector3
 inline float Vector3::squaredLength() const {
 	return e[0] * e[0] + e[1] * e[1] + e[2] * e[2];

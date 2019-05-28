@@ -36,7 +36,7 @@ public:
 	inline Vector3& operator/=(const float t);
 
 	// Vector3 Methods
-	inline float length() const;
+	inline float length() const { return sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]); }
 	inline float squaredLength() const;
 	inline void makeUnitVector();
 
