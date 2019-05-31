@@ -1,11 +1,12 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include "Ray.h"
+#include <float.h>
+#include "SurfaceList.h"
+#include "Sphere.h"
 
 // Function Predeclarations
-Vector3 colour(const Ray& r);
-float hitSphere(const Vector3& center, float radius, const Ray& r);
+Vector3 colour(const Ray& r, Surface* world);
 
 // Main Function
 int main() {
@@ -31,6 +32,16 @@ int main() {
 	// Initialise PPM
 	outputFile << "P3\n" << nx << " " << ny << "\n255\n";
 
+	// List of Surfaces
+	Surface* list[2];
+
+	// Populate list
+	list[0] = new Sphere(Vector3(0, 0, -1), 0.5);
+	list[1] = new Sphere(Vector3(0, -100.5, -1), 100.0);
+
+	// SurfaceList
+	Surface* world = new SurfaceList(list, 2);
+
 	// Fill PPM Image
 	for (int j = ny - 1; j >= 0; j--) {
 		for (int i = 0; i < nx; i++) {
@@ -42,8 +53,10 @@ int main() {
 			// Create Ray for each coordinate
 			Ray r(origin, lowerLeftCorner + u * horizontal + v * vertical);
 
+			Vector3 p = r.pointAtParameter(2.0);
+
 			// Vector3 of Values
-			Vector3 col = colour(r);
+			Vector3 col = colour(r, world);
 
 			// Converted RGB Values 0-255
 			int ir = int(255.99 * col[0]);
@@ -61,43 +74,31 @@ int main() {
 }
 
 // Colour Function
-Vector3 colour(const Ray& r) {
-	// Get value where ray touches sphere, or return -1 if doesn't touch
-	float t = hitSphere(Vector3(0, 0, -1), 0.5, r);
+Vector3 colour(const Ray& r, Surface* world) {
+	// HitRecord to check
+	HitRecord rec;
 
-	// Check if hit sphere
-	if (t > 0.0) {
-		Vector3 N = unitVector(r.pointAtParameter(t) - Vector3(0, 0, -1));
-		return 0.5 * Vector3(N.x() + 1, N.y() + 1, N.z() + 1);
+	// Check if hit
+	if (world->hit(r, 0.0, FLT_MAX, rec)) {
+		// Return normal colour
+		return 0.5* Vector3(rec.normal.x()+1, rec.normal.y()+1, rec.normal.z()+1);
 	}
-
-	// Define initial and final colours
-	Vector3 initColour = Vector3(1.0F, 1.0F, 1.0F);
-	Vector3 finalColour = Vector3(0.5F, 0.7F, 1.0F);
-
-	// Turn direction to unit vector
-	Vector3 unitDirection = unitVector(r.direction());
-
-	// Float for lerping, top to bottom of screen from 0 to 1.0
-	t = 0.5 * (unitDirection.y() + 1.0);
-
-	// Return colour at specified position
-	return (1.0 - t) * initColour + t * finalColour;
-}
-
-// Check if hit sphere
-float hitSphere(const Vector3& center, float radius, const Ray& r) {
-	Vector3 oc = r.origin() - center;
-	float a = dot(r.direction(), r.direction());
-	float b = 2.0 * dot(oc, r.direction());
-	float c = dot(oc, oc) - radius * radius;
-	float discriminant = b * b - 4 * a * c;
-	
-	// Check if real answers
-	if (discriminant < 0) {
-		return -1.0;
-	}
+	// Otherwise return background gradient
 	else {
-		return (-b - sqrt(discriminant)) / (2.0 * a);
+		
+		// Initial and final colours
+		Vector3 initColour = Vector3(1.0, 1.0, 1.0);
+		Vector3 finalColour = Vector3(0.5, 0.7, 1.0);
+
+		// Unit y direction
+		Vector3 unitDirection = unitVector(r.direction());
+
+		// Gradient variable
+		float t = 0.5 * (unitDirection.y() + 1.0);
+
+		// Return gradient
+		return (1.0 - t) * initColour + t * finalColour;
+
+
 	}
 }
