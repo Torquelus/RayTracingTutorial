@@ -2,11 +2,16 @@
 #include <string>
 #include <fstream>
 #include <float.h>
+#include <stdlib.h>
+#include <time.h>
+#include <iomanip>
 #include "SurfaceList.h"
 #include "Sphere.h"
+#include "Camera.h"
 
 // Function Predeclarations
 Vector3 colour(const Ray& r, Surface* world);
+Vector3 randomInUnitSphere();
 
 // Main Function
 int main() {
@@ -23,6 +28,18 @@ int main() {
 	int nx = 800;
 	int ny = 400;
 
+	// Number of samples for antialiasing
+	int ns = 100;
+
+	// Total number of runs
+	float total = float(nx) * float(ny);
+
+	// Progress variable
+	float progress = 0.0;
+
+	// Reset random seed
+	srand(time(NULL));
+
 	// Define Important Vector 3s
 	Vector3 lowerLeftCorner(-2.0, -1.0, -1.0);
 	Vector3 horizontal(4.0, 0.0, 0.0);
@@ -31,6 +48,10 @@ int main() {
 
 	// Initialise PPM
 	outputFile << "P3\n" << nx << " " << ny << "\n255\n";
+
+	// Set output format
+	std::cout << std::fixed;
+	std::cout << std::setprecision(1);
 
 	// List of Surfaces
 	Surface* list[2];
@@ -42,21 +63,38 @@ int main() {
 	// SurfaceList
 	Surface* world = new SurfaceList(list, 2);
 
+	// Create main camera
+	Camera cam;
+
 	// Fill PPM Image
 	for (int j = ny - 1; j >= 0; j--) {
 		for (int i = 0; i < nx; i++) {
-			
-			// Coordinates
-			float u = float(i) / float(nx);
-			float v = float(j) / float(ny);
+			// Initialise colour to 0, 0, 0
+			Vector3 col(0, 0, 0);
 
-			// Create Ray for each coordinate
-			Ray r(origin, lowerLeftCorner + u * horizontal + v * vertical);
+			// Loop through for antialiasing
+			for (int s = 0; s < ns; s++) {
+				
+				// Coordinates
+				float u = float(i + ((float)rand() / (RAND_MAX))) / float(nx);
+				float v = float(j + ((float)rand() / (RAND_MAX))) / float(ny);
 
-			Vector3 p = r.pointAtParameter(2.0);
+				// Create ray
+				Ray r = cam.getRay(u, v);
 
-			// Vector3 of Values
-			Vector3 col = colour(r, world);
+				// Find point at ray
+				Vector3 p = r.pointAtParameter(2.0);
+
+				// Add to colour
+				col += colour(r, world);
+
+			}
+
+			// Get average of colour
+			col /= float(ns);
+
+			// Fix gamma
+			col = Vector3(sqrt(col[0]), sqrt(col[1]), sqrt(col[2]));
 
 			// Converted RGB Values 0-255
 			int ir = int(255.99 * col[0]);
@@ -65,8 +103,16 @@ int main() {
 
 			// Add to PPM
 			outputFile << ir << " " << ig << " " << ib << "\n";
+
+			// Print progress
+			progress += 1.0;
+			float percent = 100 * progress / total;
+			std::cout << "Progress: " << percent << "%" << "\r";
 		}
 	}
+
+	// Add newline
+	std::cout << "\nCompleted!\n";
 
 	// Cleanup
 	outputFile.close();
@@ -79,9 +125,13 @@ Vector3 colour(const Ray& r, Surface* world) {
 	HitRecord rec;
 
 	// Check if hit
-	if (world->hit(r, 0.0, FLT_MAX, rec)) {
-		// Return normal colour
-		return 0.5* Vector3(rec.normal.x()+1, rec.normal.y()+1, rec.normal.z()+1);
+	if (world->hit(r, 0.001, FLT_MAX, rec)) {
+		
+		// Get target scattering
+		Vector3 target = rec.p + rec.normal + randomInUnitSphere();
+
+		// Return scattered colour
+		return 0.5 * colour(Ray(rec.p, target - rec.p), world);
 	}
 	// Otherwise return background gradient
 	else {
@@ -101,4 +151,21 @@ Vector3 colour(const Ray& r, Surface* world) {
 
 
 	}
+}
+
+// Return random point in unit circle
+Vector3 randomInUnitSphere() {
+
+	// Point
+	Vector3 p;
+
+	// Try getting random point
+	do {
+		p = 2.0 * Vector3(((float)rand() / (RAND_MAX)), ((float)rand() / (RAND_MAX)), ((float)rand() / (RAND_MAX))) - Vector3(1, 1, 1);
+	} while (p.squaredLength() >= 1.0);
+
+
+	// Return point
+	return p;
+
 }
