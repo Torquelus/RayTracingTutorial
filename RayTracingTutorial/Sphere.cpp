@@ -4,12 +4,14 @@
 Sphere::Sphere(){
 	center = Vector3(0, 0, 0);
 	radius = 0;
+	material = nullptr;
 }
 
 // Constructor with Initialisation
-Sphere::Sphere(Vector3 cen, float r) {
+Sphere::Sphere(Vector3 cen, float r, Material* mat) {
 	center = cen;
 	radius = r;
+	material = mat;
 }
 
 // Sphere Hit Function
@@ -35,6 +37,7 @@ bool Sphere::hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const {
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
 			rec.normal = (rec.p - center) / radius;
+			rec.mat = material;
 			return true;
 		}
 		
@@ -46,6 +49,7 @@ bool Sphere::hit(const Ray& r, float tMin, float tMax, HitRecord& rec) const {
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
 			rec.normal = (rec.p - center) / radius;
+			rec.mat = material;
 			return true;
 		}
 

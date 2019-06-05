@@ -8,10 +8,12 @@
 #include "SurfaceList.h"
 #include "Sphere.h"
 #include "Camera.h"
+#include "Metal.h"
+#include "Lambertian.h"
+#include "Dielectric.h"
 
 // Function Predeclarations
-Vector3 colour(const Ray& r, Surface* world);
-Vector3 randomInUnitSphere();
+Vector3 colour(const Ray& r, Surface* world, int depth);
 
 // Main Function
 int main() {
@@ -54,14 +56,16 @@ int main() {
 	std::cout << std::setprecision(1);
 
 	// List of Surfaces
-	Surface* list[2];
+	Surface* list[4];
 
 	// Populate list
-	list[0] = new Sphere(Vector3(0, 0, -1), 0.5);
-	list[1] = new Sphere(Vector3(0, -100.5, -1), 100.0);
+	list[0] = new Sphere(Vector3(0, 0, -1), 0.5, new Lambertian(Vector3(0.8, 0.3, 0.3)));
+	list[1] = new Sphere(Vector3(0, -100.5, -1), 100.0, new Lambertian(Vector3(0.8, 0.8, 0.0)));
+	list[2] = new Sphere(Vector3(1, 0, -1), 0.5, new Metal(Vector3(0.8, 0.6, 0.2), 0.3));
+	list[3] = new Sphere(Vector3(-1, 0, -1), 0.5, new Dielectric(1.5));
 
 	// SurfaceList
-	Surface* world = new SurfaceList(list, 2);
+	Surface* world = new SurfaceList(list, 4);
 
 	// Create main camera
 	Camera cam;
@@ -86,7 +90,7 @@ int main() {
 				Vector3 p = r.pointAtParameter(2.0);
 
 				// Add to colour
-				col += colour(r, world);
+				col += colour(r, world, 0);
 
 			}
 
@@ -120,18 +124,27 @@ int main() {
 }
 
 // Colour Function
-Vector3 colour(const Ray& r, Surface* world) {
+Vector3 colour(const Ray& r, Surface* world, int depth) {
+	
 	// HitRecord to check
 	HitRecord rec;
 
 	// Check if hit
 	if (world->hit(r, 0.001, FLT_MAX, rec)) {
 		
-		// Get target scattering
-		Vector3 target = rec.p + rec.normal + randomInUnitSphere();
+		// Holders of information
+		Ray scattered;
+		Vector3 attenuation;
 
-		// Return scattered colour
-		return 0.5 * colour(Ray(rec.p, target - rec.p), world);
+		// Check if within depth and other stuff
+		if (depth < 50 && rec.mat->scatter(r, rec, attenuation, scattered)) {
+			return attenuation * colour(scattered, world, depth + 1);
+		}
+		// Else return default colour
+		else {
+			return Vector3(0, 0, 0);
+		}
+
 	}
 	// Otherwise return background gradient
 	else {
@@ -151,21 +164,4 @@ Vector3 colour(const Ray& r, Surface* world) {
 
 
 	}
-}
-
-// Return random point in unit circle
-Vector3 randomInUnitSphere() {
-
-	// Point
-	Vector3 p;
-
-	// Try getting random point
-	do {
-		p = 2.0 * Vector3(((float)rand() / (RAND_MAX)), ((float)rand() / (RAND_MAX)), ((float)rand() / (RAND_MAX))) - Vector3(1, 1, 1);
-	} while (p.squaredLength() >= 1.0);
-
-
-	// Return point
-	return p;
-
 }
